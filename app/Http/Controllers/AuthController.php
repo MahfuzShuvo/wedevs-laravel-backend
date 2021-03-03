@@ -6,6 +6,7 @@ use JWTAuth;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use App\User;
+use Auth;
 
 class AuthController extends Controller
 {
@@ -14,6 +15,7 @@ class AuthController extends Controller
     // login
     public function login(Request $request)
     {
+        
         $credentials = $request->only('email', 'password');
         $token = null;
 
@@ -27,6 +29,7 @@ class AuthController extends Controller
         return response()->json([
             'status' => true,
             'token' => $token,
+            'user' => Auth::user(),
             'message' => 'Logged in successfully'
         ]);
 
@@ -63,9 +66,9 @@ class AuthController extends Controller
     // logout
     public function logout(Request $request)
     {
-        $this->validate($request, [
-            'token' => 'required'
-        ]);
+        // $this->validate($request, [
+        //     'token' => 'required'
+        // ]);
 
         try {
             JWTAuth::invalidate($request->token);
@@ -79,6 +82,11 @@ class AuthController extends Controller
                 'message' => 'Something went wrong. User can not be logged out.'
             ]);
         }
+    }
+
+    public function user()
+    {
+        return Auth::user();
     }
 
 }

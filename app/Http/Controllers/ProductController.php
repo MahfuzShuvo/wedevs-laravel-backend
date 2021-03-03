@@ -22,7 +22,11 @@ class ProductController extends Controller
     public function index()
     {
         $products = $this->user->products()->get(['id', 'title', 'description', 'price', 'image', 'created_by'])->toArray();
-        return $products;
+        // return $products;
+        return response()->json([
+            'status' => true,
+            'products' => $products
+        ]);
     }
 
     /**
@@ -48,7 +52,7 @@ class ProductController extends Controller
             'title' => 'required',
             'description' => 'required',
             'price' => 'required',
-            'image' => 'required|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'image' => 'required|max:2048',
         ]);
 
         // save product into database
@@ -110,28 +114,38 @@ class ProductController extends Controller
      * @param  \App\Product  $product
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Product $product)
+    public function update(Request $request, $id)
     {
-        // update product into database
-        $product->title = $request->title;
-        $product->description = $request->description;
-        $product->price = $request->price;
+        $product = Product::find($id);
+
+        // return response()->json([
+        //     'status' => true,
+        //     'request' => $request->all,
+        //     'message' => 'Product requested successfully'
+        // ]);
         
-        // image update
-        if ($request->file('image')) {
-            if (File::exists($product->image)) {
-                File::delete($product->image);
+        // update product into database
+        if ($product) {
+            $product->title = $request->title;
+            $product->description = $request->description;
+            $product->price = $request->price;
+            
+            // image update
+            if ($request->file('image')) {
+                if (File::exists($product->image)) {
+                    File::delete($product->image);
+                }
+
+                $image = $request->file('image');
+
+                $imagename = $image->getClientOriginalName();
+                $ext = $image->getClientOriginalExtension();
+
+                $image_title = time().$imagename;
+                $image->move('images/products/', $image_title);
+                $product->image = "images/products/".$image_title;
             }
-
-            $image = $request->file('image');
-
-            $imagename = $image->getClientOriginalName();
-            $ext = $image->getClientOriginalExtension();
-
-            $image_title = time().$imagename.'.'.$ext;
-            $image->move('images/products/', $image_title);
-            $product->image = "images/products/".$image_title;
-        }
+        
         
         if ($this->user->products()->save($product)) {
             return response()->json([
@@ -143,7 +157,8 @@ class ProductController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Product could not be updated'
-            ], 500);
+            ],400);
+        }
         }
     }
 
@@ -153,23 +168,28 @@ class ProductController extends Controller
      * @param  \App\Product  $product
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Product $product)
+    public function destroy($id)
     {
-        if (File::exists($product->image)) {
-            File::delete($product->image);
-        }
+        $product = Product::find($id);
+        // console.log($product);
         
-        if ($product->delete()) {
-            return response()->json([
-                'status' => true,
-                'product' => $product,
-                'message' => 'Product deleted successfully'
-            ]);
-        } else {
-            return response()->json([
-                'status' => false,
-                'message' => 'Product could not be deleted'
-            ]);
+        if ($product) {
+            if (File::exists($product->image)) {
+                File::delete($product->image);
+            }
+            
+            if ($product->delete()) {
+                return response()->json([
+                    'status' => true,
+                    'product' => $product,
+                    'message' => 'Product deleted successfully'
+                ]);
+            } else {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Product could not be deleted'
+                ]);
+            }
         }
     }
 }
